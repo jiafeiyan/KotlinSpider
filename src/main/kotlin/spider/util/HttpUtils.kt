@@ -1,6 +1,5 @@
 package spider.util
 
-import spider.bloomFilter.BloomFilter
 import java.io.File
 import java.util.*
 
@@ -9,8 +8,7 @@ import java.util.*
  */
 fun setProxyIp(): Unit {
     try {
-        var url: String = BloomFilter().javaClass.classLoader.getResource(".").file.toString()
-        url = url.replace("target/classes/", "", ignoreCase = true) + "src/main/kotlin/spider/resources/proxyip.txt"
+        val url: String = System.getProperty("user.dir") + "/src/main/kotlin/spider/resources/proxyip.txt"
 
         val ipList: ArrayList<String> = arrayListOf()
 
@@ -34,5 +32,9 @@ fun setProxyIp(): Unit {
         println(message = "出现异常，重新设置代理IP")
         setProxyIp()
     }
+}
+
+fun main(args: Array<String>) {
+    setProxyIp()
 }
 
