@@ -24,6 +24,7 @@ fun getDocument(url: String): Document {
 }
 
 fun main(args: Array<String>) {
-    val url: String = "https://www.zhihu.com/people/chen-yan-78-96/answers"
+//    val url: String = "https://www.zhihu.com/people/chen-yan-78-96/answers"
+    val url: String = "https://www.zhihu.com/people/wang-ni-ma-94/answers"
     println(message = getDocument(url))
 }

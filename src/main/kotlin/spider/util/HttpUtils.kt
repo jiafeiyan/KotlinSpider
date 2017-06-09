@@ -34,7 +34,4 @@ fun setProxyIp(): Unit {
     }
 }
 
-fun main(args: Array<String>) {
-    setProxyIp()
-}
 
