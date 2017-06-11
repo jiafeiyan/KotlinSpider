@@ -3,19 +3,54 @@ package spider
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import spider.bean.UserBean
+import spider.bloomFilter.BloomFilter
 import spider.util.getDocument
 import java.util.concurrent.BlockingQueue
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.concurrent.thread
 
 /**
  * Created by chenyan on 2017/6/8.
  */
 class  SpiderServer{
 
-    var urlQuenue: BlockingQueue<String> = LinkedBlockingQueue<String>()
+    // 用户url阻塞队列
+    private val urlQuenue: BlockingQueue<String> = LinkedBlockingQueue<String>()
+    // 线程池
+    private val executor: Executor = Executors.newFixedThreadPool(20)
+    // 使用Bloom Filter算法去重
+    private val filter: BloomFilter = BloomFilter()
+
+    // 爬取接口
+    fun start(start_URL: String): Unit {
+        urlQuenue.put(start_URL)
+        println(message = "爬取数据开始。。。。。。。。。。。。。。。。。。。。。。。。。。。。。")
+        for (it in 0..5){
+            executor.execute {
+                ->
+                thread {
+                    ->
+                    while (true){
+                        val tmp: String = getUrl()
+                        if(!filter.contains(tmp)){
+                            filter.add(tmp)
+                            if(tmp != null){
+                                crawler(tmp)
+                            }
+                        }else{
+                            println(message = "此URL已经存在：$tmp")
+                        }
+
+                    }
+                }
+            }
+        }
+    }
 
     //爬数据
-     fun crawler(url: String): Unit {
+     private fun crawler(url: String): Unit {
         val userUrlContent: Element = Jsoup.parse(getDocument(url).toString())
         val userContent: String = userUrlContent?.text()
         val bean: UserBean = UserBean()
@@ -82,23 +117,32 @@ class  SpiderServer{
             }
         }
         println("爬取成功：" + bean.toString())
+
     }
 
-    fun getUserFollowingUrl(url: String): Unit{
-        var followingUrl = url + "/following?page=1"
+    private fun addUserFollowingUrl(url: String): Unit{
+        val followingUrl = url + "/following?page=1"
         println(getDocument(followingUrl).toString())
         val followingContent: Element = Jsoup.parse(getDocument(followingUrl).toString())
         followingContent.run {
             ->
-            for (e in select(".List-item")) {
-                println(e.select(".UserLink-link").attr("href"))
-            }
+            select(".List-item")
+                    .map { it.select(".UserLink-link").attr("href") }
+                    .filterNot { it.contains("org") }
+                    .forEach { urlQuenue.put("https://www.zhihu.com" + it) }
         }
+    }
+
+    private fun getUrl(): String {
+        val tempUrl: String = urlQuenue.take()
+        return tempUrl
     }
 
 }
 
 fun main(args: Array<String>) {
+
 //    SpiderServer().crawler("https://www.zhihu.com/people/chen-yan-78-96/answers")
-      SpiderServer().getUserFollowingUrl("https://www.zhihu.com/people/chen-yan-78-96/following?page=1")
+//      SpiderServer().getUserFollowingUrl("https://www.zhihu.com/people/chen-yan-78-96/following?page=1")
+
 }
