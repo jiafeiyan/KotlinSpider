@@ -37,9 +37,8 @@ fun getConnection(): Connection? {
     }
 
     Class.forName(driverClassName)
-    conn = getConnection(url, username, password)
 
-    return conn
+    return getConnection(url, username, password)
 }
 
 fun closeConnection(rs: ResultSet?,

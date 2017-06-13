@@ -1,15 +1,18 @@
-package spider
+package spider.search
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import spider.bean.UserBean
 import spider.bloomFilter.BloomFilter
+import spider.util.getConnection
 import spider.util.getDocument
+import java.sql.Connection
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
+
 
 /**
  * Created by chenyan on 2017/6/8.
@@ -22,6 +25,8 @@ class  SpiderServer{
     private val executor: Executor = Executors.newFixedThreadPool(20)
     // 使用Bloom Filter算法去重
     private val filter: BloomFilter = BloomFilter()
+    // 数据库连接
+    private val conn: Connection? = getConnection()
 
     // 爬取接口
     fun start(start_URL: String): Unit {
@@ -36,13 +41,10 @@ class  SpiderServer{
                         val tmp: String = getUrl()
                         if(!filter.contains(tmp)){
                             filter.add(tmp)
-                            if(tmp != null){
-                                crawler(tmp)
-                            }
+                            crawler(tmp)
                         }else{
                             println(message = "此URL已经存在：$tmp")
                         }
-
                     }
                 }
             }
@@ -52,7 +54,7 @@ class  SpiderServer{
     //爬数据
      private fun crawler(url: String): Unit {
         val userUrlContent: Element = Jsoup.parse(getDocument(url).toString())
-        val userContent: String = userUrlContent?.text()
+        val userContent: String = userUrlContent.text()
         val bean: UserBean = UserBean()
 
         bean.run{
@@ -102,10 +104,10 @@ class  SpiderServer{
                     answersNum = userContent.substring(userContent.indexOf("回答")+2,userContent.indexOf("提问")-1)
 
                     // 被感谢数
-                    starsNum = userContent.substring(userContent.indexOf("获得")+3,userContent.indexOf("次赞同")-1)
+                    starsNum = userContent.substring(userContent.indexOf("获得 ")+3,userContent.indexOf(" 次赞同"))
 
                     // 被感谢数
-                    thxNum = userContent.substring(userContent.lastIndexOf("获得")+3,userContent.indexOf("次感谢")-1)
+                    thxNum = userContent.substring(userContent.lastIndexOf("获得 ")+3,userContent.indexOf(" 次感谢"))
 
                     // 关注的人数
                     followingNum = select(".NumberBoard-value")?.first()?.text()
@@ -118,11 +120,34 @@ class  SpiderServer{
         }
         println("爬取成功：" + bean.toString())
 
+        val sql: String = "Insert Into ZHIHU_USER " +
+                "(name,sex,business,company,position,education,major,answersNum,starsNum,thxNum,followingNum,followersNum) " +
+                "Values(?,?,?,?,?,?,?,?,?,?,?,?)"
+
+        conn?.prepareStatement(sql)?.run {
+            ->
+            bean.apply {
+                ->
+                setString(1 , name)
+                setString(2 , sex)
+                setString(3 , business)
+                setString(4 , company)
+                setString(5 , position)
+                setString(6 , education)
+                setString(7 , major)
+                setString(8 , answersNum)
+                setString(9 , starsNum)
+                setString(10 , thxNum)
+                setString(11 , followingNum)
+                setString(12 , followersNum)
+                executeUpdate()
+            }
+        }
+        addUserFollowingUrl(url)
     }
 
     private fun addUserFollowingUrl(url: String): Unit{
-        val followingUrl = url + "/following?page=1"
-        println(getDocument(followingUrl).toString())
+        val followingUrl = url + "following?page=1"
         val followingContent: Element = Jsoup.parse(getDocument(followingUrl).toString())
         followingContent.run {
             ->
@@ -135,14 +160,15 @@ class  SpiderServer{
 
     private fun getUrl(): String {
         val tempUrl: String = urlQuenue.take()
+        println(message = "准备爬取数据：$tempUrl")
         return tempUrl
     }
 
 }
 
 fun main(args: Array<String>) {
-
 //    SpiderServer().crawler("https://www.zhihu.com/people/chen-yan-78-96/answers")
 //      SpiderServer().getUserFollowingUrl("https://www.zhihu.com/people/chen-yan-78-96/following?page=1")
+    SpiderServer().start("https://www.zhihu.com/people/chen-yan-78-96/")
 
 }
